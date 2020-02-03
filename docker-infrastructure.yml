@@ -1,0 +1,49 @@
+version: '3.7'
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    hostname: 127.0.0.1
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['gitlab_shell_ssh_port'] = 1003
+    ports:
+      - "1000:80"
+      - "1002:9090"
+      - "1001:22"
+    volumes:
+      - ./gitlab-volume/config/gitlab:/etc/gitlab
+      - ./gitlab-volume/data/gitlab:/var/opt/gitlab
+      - ./gitlab-volume/logs:/var/log/gitlab
+      - ./gitlab-volume/logs/reconfigure:/var/log/gitlab/reconfigure
+
+    networks:
+      - locrio-network
+    deploy:
+        replicas: 1
+        labels: [APP = gitlab]
+        placement:
+            constraints: [node.role == manager]
+        restart_policy:
+            condition: on-failure   
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    depends_on:
+      - gitlab
+    volumes:
+      - ./gitlab-runner-volume/config/gitlab-runner:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - locrio-network
+    deploy:
+        replicas: 1
+        labels: [APP = gitlab-runner]
+        placement:
+            constraints: [node.role == manager]
+        restart_policy:
+            condition: on-failure      
+networks:
+  locrio-network:
+    external: true
+
+  
